@@ -1,0 +1,13 @@
+library(stats)
+library(dplyr)
+
+df = read.csv(file="data/crypto_prices.csv", header=TRUE)
+
+# Drop time portion of DateTime column...
+df$DateTime <- sapply(X=df$DateTime, FUN=(function(x) strsplit(as.character(x), " ")[[1]][1]))
+
+# ... and convert the column to Date
+df$DateTime <- as.Date(df$DateTime, "%m/%d/%Y")
+
+bitcoin_df=df %>% filter(Symbol=="BTC")
+View(bitcoin_df)

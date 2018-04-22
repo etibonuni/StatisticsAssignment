@@ -1,0 +1,5 @@
+library(devtools)
+devtools::install_github("jessevent/crypto")  
+library(crypto)  
+will_i_get_rich <- getCoins() 
+View(will_i_get_rich)
