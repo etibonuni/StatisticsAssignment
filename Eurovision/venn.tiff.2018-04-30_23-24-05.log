@@ -1,6 +1,0 @@
-INFO [2018-04-30 23:24:05] [[1]]
-INFO [2018-04-30 23:24:05] calculate.overlap(as.list(mutual.voters[, c("country.1", "country.2")]))
-INFO [2018-04-30 23:24:05] 
-INFO [2018-04-30 23:24:05] [[2]]
-INFO [2018-04-30 23:24:05] [1] "venn.tiff"
-INFO [2018-04-30 23:24:05] 

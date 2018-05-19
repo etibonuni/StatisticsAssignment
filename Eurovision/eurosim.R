@@ -1,12 +1,13 @@
 library(dplyr)
 library(data.table)
-library(VennDiagram)
-library(gplots)
-library(eulerr)
-library(diagram)
+#library(VennDiagram)
+#library(gplots)
+#library(eulerr)
+#library(diagram)
 library(RNeo4j)
+library(igraph)
 
-trials <- 500
+trials <- 100
 possible.votes <- c(12, 10, 8, 7, 6, 5, 4, 3, 2, 1)
 
 year.range.all<-seq(1975,2017)
@@ -111,18 +112,24 @@ find.mutual.voters <- function(average.votes, statistically.significant, year){
   recip.countries = colnames(average.votes)
   
   mutual.voters <- data.frame(country.1=character(), country.2=character(), average.vote.fwd=double(), average.vote.bwd=double(), year=integer())
-  
+  #onesided.voters <- data.frame(country.1=character(), country.2=character(), average.vote=double(), year=integer())
   for (donor in donor.countries){
     for (recip in recip.countries) {
       if (statistically.significant[donor, recip]){
+        mutual<-FALSE
         if ( (recip %in% donor.countries) && (donor %in% recip.countries)) {
           if (statistically.significant[recip, donor]) {
-            if (nrow(mutual.voters[mutual.voters$country.2==donor,])==0){
+            #if (nrow(mutual.voters[mutual.voters$country.2==donor,])==0){
+              mutual <- TRUE
               mutual.pair <- data.frame(country.1=donor, country.2=recip, average.vote.fwd=average.votes[donor,recip], average.vote.bwd=average.votes[recip,donor], year=year)
               mutual.voters <- rbind(mutual.voters, mutual.pair)
-            }
+            #}
           }
         }
+        # if (!mutual){
+        #   recip.pair <- data.frame(country.1=donor, country.2=recip, average.vote=average.votes[donor, recip], year=year)
+        #   onesided.voters <- rbind(onesided.voters, recip.pair)
+        # }
       }
     }
   }
@@ -167,8 +174,8 @@ find.mutual.voters2 <- function(average.votes, statistically.significant){
 #end.date=2005
 
 voting.history <- read.csv("Data/eurovision_song_contest_1975_2017v4.csv", header = TRUE  )
-graph = startGraph("http://localhost:7474/db/data/")
-clear(graph, input=FALSE)
+#graph = startGraph("http://localhost:7474/db/data/")
+#clear(graph, input=FALSE)
 
 for (year.range in year.ranges){
   start.date = year.range[1]
@@ -183,25 +190,51 @@ for (year.range in year.ranges){
   statistically.significant <- average.votes>vote.thresholds
   
   mutual.voters <- find.mutual.voters(average.votes, statistically.significant, start.date)
-  neighbours <- find.mutual.voters2(average.votes, statistically.significant)
+ # neighbours <- find.mutual.voters2(average.votes, statistically.significant)
   
-  pp <- plotmat(neighbours, curve = 0, name = row.names(neighbours),
-   lwd = 1, box.lwd = 2, cex.txt = 0.8,
-   box.type = "circle", box.prop = 0.2, arr.type = "triangle",
-   arr.pos = 0.4, shadow.size = 0.0,
-   main = paste("Detected collusive voting at 1% significance level (",as.character(start.date),"-",as.character(end.date),")"))
+  ig = graph_from_data_frame(mutual.voters, directed = TRUE)
   
-  countryNodeType <- paste(sep="_", "Country", as.character(start.date))
-  addConstraint(graph, countryNodeType, "name")
+  ceb <- cluster_edge_betweenness(ig)
+  #class(ceb)
+  plot(ceb, ig)
   
-  addCollusionToGraph <- function(x, graph){
-    print(x)
-    country1 <- getOrCreateNode(graph, countryNodeType, name=x[1])
-    country2 <- getOrCreateNode(graph, countryNodeType, name=x[2])
-    
-    createRel(country1, x[3], country2, avgVote=x[3], year=start.date)
-    createRel(country2, x[4], country1, avgVote=x[4], year=start.date)
-  }
+  #coords <- layout.fruchterman.reingold(ig)*0.1
+  pdf(file = paste(sep="", "collusions_", as.character(start.date),"_",as.character(end.date),".pdf"))
+  plot(ceb, ig, edge.curved=FALSE, vertex.shape="circle", vertex.size=3,
+       layout=layout_nicely,# edge.label=round(mutual.voters$average.vote.fwd, digits=2), 
+       vertex.label.cex=0.75, edge.label.cex=0.5, vertex.label.dist=1, 
+       rescale=TRUE, ylim=c(-1,1),xlim=c(-1,1), asp = 0, edge.arrow.size=0.001, edge.arrow.width=0.001, 
+       main=paste("Detected collusive voting at 1% significance level (",as.character(start.date),"-",as.character(end.date),")"))
+  dev.off()
   
-  apply(mutual.voters, MARGIN=1, addCollusionToGraph, graph=graph)
+  #ig = graph_from_data_frame(voters$one.sided, directed = TRUE)
+  #  
+  #
+  # pdf(file = paste(sep="", "onesided_", as.character(start.date),"_",as.character(end.date),".pdf"))
+  # plot(ig, edge.curved=FALSE, vertex.shape="circle", vertex.size=3,
+  #      layout=layout_nicely,# edge.label=round(mutual.voters$average.vote.fwd, digits=2), 
+  #      vertex.label.cex=0.75, edge.label.cex=0.5, vertex.label.dist=1, 
+  #      rescale=TRUE, ylim=c(-1,1),xlim=c(-1,1), asp = 0, edge.arrow.size=0.6, edge.arrow.width=0.61, 
+  #      main=paste("Detected vote donations at 1% significance level (",as.character(start.date),"-",as.character(end.date),")"))
+  # dev.off()
+  
+  # pp <- plotmat(neighbours, curve = 0, name = row.names(neighbours),
+  #  lwd = 1, box.lwd = 2, cex.txt = 0.8,
+  #  box.type = "circle", box.prop = 0.2, arr.type = "triangle",
+  #  arr.pos = 0.4, shadow.size = 0.0,
+  #  main = paste("Detected collusive voting at 1% significance level (",as.character(start.date),"-",as.character(end.date),")"))
+  
+#  countryNodeType <- paste(sep="_", "Country", as.character(start.date))
+#  addConstraint(graph, countryNodeType, "name")
+
+#  addCollusionToGraph <- function(x, graph){
+#    print(x)
+#    country1 <- getOrCreateNode(graph, countryNodeType, name=x[1])
+#    country2 <- getOrCreateNode(graph, countryNodeType, name=x[2])
+#
+#    createRel(country1, x[3], country2, avgVote=x[3], year=start.date)
+#    createRel(country2, x[4], country1, avgVote=x[4], year=start.date)
+#  }
+
+#  apply(mutual.voters, MARGIN=1, addCollusionToGraph, graph=graph)
 }
