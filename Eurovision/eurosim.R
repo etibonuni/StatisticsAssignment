@@ -7,7 +7,7 @@ library(data.table)
 library(RNeo4j)
 library(igraph)
 
-trials <- 100
+trials <- 10000
 possible.votes <- c(12, 10, 8, 7, 6, 5, 4, 3, 2, 1)
 
 year.range.all<-seq(1975,2017)
@@ -56,7 +56,8 @@ simulate.voting <- function(voting.history, start.year, end.year, iters=10000){
       if (from.country != to.country)
       {
         #cat("To ", to.country, "\n")
-        average_simulation=vector()
+        average_simulation <- vector()
+        last.variances <- vector()
         for (iter in 1:iters){
           one_simulation=vector()
           for (year in start.year:end.year) {
@@ -72,6 +73,29 @@ simulate.voting <- function(voting.history, start.year, end.year, iters=10000){
           }
           if (length(one_simulation)>0){
             average_simulation<-c(average_simulation, mean(one_simulation))
+          }
+          # Only test for convergence after at least 50 iterations
+          if (length(average_simulation)>50){
+            variance <- var(average_simulation)
+            if (length(last.variances) < 5) { # check last 5 variances
+              last.variances <- c(last.variances, variance)
+            }
+            else
+            {
+              last.variances <- c(last.variances[-1], variance)
+            }
+            
+            if (length(last.variances) >= 5){
+              varmean <- mean(last.variances)
+              maxvar <- max(abs(last.variances-varmean))
+              
+              if ((maxvar) < 0.0005){
+                cat("Detected convergence at", iter, "simulations for", 
+                    from.country, "->", to.country, "during ", start.year, "-", end.year, ". ")
+                
+                break
+              }
+            }
           }
         }
         thresh <- quantile(average_simulation, probs=c(0.99), names=FALSE)[1]

@@ -251,7 +251,49 @@ for (paramNdx in 1:nrow(paramMatrix)){
     return(stateMat)
   }
   
-  # 
+  edgematrix.from.vertexlist <- function(vlist){
+    emat <- matrix()
+    for (vndx in 2:length(vlist)){
+      e <- matrix(c(vlist[vndx-1], vlist[vndx]), ncol=2)
+      
+      if (ncol(emat)<2){
+        emat <- e
+      } else {
+        emat <- rbind(emat, e)
+      }
+    }
+    
+    return(emat)
+  }
+  
+  coords.from.vertexlist <- function(vlist, width, height){
+    coords <- matrix()
+    
+    boxwidth <- width/10
+    boxheight <- height/10
+    
+    for (vndx in 1:length(vlist)){
+      col <- ((vlist[vndx]-1) %% 10)
+      row <- ((vlist[vndx]-1) %/% 10)
+      
+      # Reverse for even rows
+      if (row %% 2 == 0){
+        col <- (10-col)
+      }
+      
+      # calc center of box
+      vc <- (boxheight * row) + (boxheight/2)
+      hc <- (boxwidth * col) + (boxwidth/2)
+      
+      if (ncol(coords) < 2){
+        coords <- matrix(c(vc, hc), ncol=2)
+      } else {
+        coords <- rbind(coords, matrix(c(vc, hc), ncol=2))
+      }
+    }
+    
+    return(coords)
+  }
   snlgraph <- graph_from_adjacency_matrix(transitionMatrix>0, mode="directed")
   shortest_state <- rep(0, 101)
   
@@ -260,7 +302,7 @@ for (paramNdx in 1:nrow(paramMatrix)){
   
   shortest_state_mat = adjustStateMatrix(matrix(shortest_state[2:length(shortest_state)], nrow=10, ncol=10, byrow = TRUE))
   
-  pdf(file = paste(sep="", "shortest_game", fNameSuffix, ".pdf"))
+#  pdf(file = paste(sep="", "shortest_game", fNameSuffix, ".pdf"))
   anImage <- readJPEG("snakesnLadders3.jpg")
   # Set up a plot area with no plot
   plot(x=0:1, y=0:1, type='n', main="", xlab="x", ylab="y")
@@ -270,8 +312,14 @@ for (paramNdx in 1:nrow(paramMatrix)){
   lim <- par()
   rasterImage(anImage, lim$usr[1], lim$usr[3], lim$usr[2], lim$usr[4],)
   
-  image(t(apply(shortest_state_mat[nrow(shortest_state_mat):1,], 2, rev)), col=c("transparent", 1), axes=FALSE, add=TRUE, useRaster=TRUE)
-  dev.off()
+  #image(t(apply(shortest_state_mat[nrow(shortest_state_mat):1,], 2, rev)), col=c("transparent", 1), axes=FALSE, add=TRUE, useRaster=TRUE)
+#  dev.off()
   par(par.old)
   options(warn=0)
 }
+
+ #plot(ig, edge.curved=FALSE, vertex.shape="circle", vertex.size=3,
+#      layout=layout_nicely,# edge.label=round(mutual.voters$average.vote.fwd, digits=2), 
+#      vertex.label.cex=0.75, edge.label.cex=0.5, vertex.label.dist=1, 
+#      rescale=TRUE, ylim=c(-1,1),xlim=c(-1,1), asp = 0, edge.arrow.size=0.6, edge.arrow.width=0.61, 
+#      main=paste("Detected vote donations at 1% significance level (",as.character(start.date),"-",as.character(end.date),")"))
